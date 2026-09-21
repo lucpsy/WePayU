@@ -17,11 +17,14 @@ import java.util.Map;
 public class Facade {
     Banco banco = new Banco();
     //-------------------------------------------------------
+    public void encerrarSistema(){
+        banco.salvar();
+    }
     public void zerarSistema(){
         banco.clear();
     }
     //-------------------------------------------------------
-    public String criarEmpregado(String nome,String endereco,String tipo,String salario) throws EmpregadoNaoExisteException {
+    public String criarEmpregado(String nome,String endereco,String tipo,String salario){
         if(tipo.equals("horista")){
             banco.add(new Horista(nome,endereco,tipo,salario));
         }else if(tipo.equals("assalariado")){
@@ -30,7 +33,7 @@ public class Facade {
         return  banco.empregados.lastEntry().getKey();
     }
     //-------------------------------------------------------
-    public String criarEmpregado(String nome,String endereco,String tipo,String salario,double comissao) throws EmpregadoNaoExisteException {
+    public String criarEmpregado(String nome,String endereco,String tipo,String salario,String comissao){
         banco.add(new Comissionado(nome,endereco,tipo,salario,comissao));
         return banco.empregados.lastEntry().getKey();
     }
@@ -47,38 +50,46 @@ public class Facade {
         throw  new EmpregadoNaoExisteException();
     }
     //-------------------------------------------------------
-    public String getAtributoEmpregado(String id,String atributo){
-        if(atributo.equals("nome")){
-            return banco.empregados.get(id).getNome();
+    public String getAtributoEmpregado(String id,String atributo) throws EmpregadoNaoExisteException{
+        if(banco.empregados.containsKey(id)){
+            if(atributo.equals("nome")){
+                return banco.empregados.get(id).getNome();
+            }
+            else if(atributo.equals("endereco")){
+                return banco.empregados.get(id).getEndereco();
+            }
+            else if(atributo.equals("tipo")){
+                return banco.empregados.get(id).getTipo();
+            }
+            else if(atributo.equals("salario")){
+                return banco.empregados.get(id).getSalario();
+            }else if(banco.empregados.get(id) instanceof Comissionado && atributo.equals("comissao")){
+                return ((Comissionado) banco.empregados.get(id)).getComissao();
+            }
+        }else{
+           throw new EmpregadoNaoExisteException();
         }
-        else if(atributo.equals("endereco")){
-            return banco.empregados.get(id).getEndereco();
-        }
-        else if(atributo.equals("tipo")){
-            return banco.empregados.get(id).getTipo();
-        }
-        else if(atributo.equals("salario")){
-            return banco.empregados.get(id).getSalario();
-        }
-        //-------------------------------------------------------
-        return null;
+        return "false";
     }
     //------------------------------------------------------
     public void removerEmpregado(String id) throws EmpregadoNaoExisteException{
-        if(banco.empregados.remove(id) == null){
+        if(banco.empregados.containsKey(id)){
+            banco.empregados.remove(id);
+        }else {
             throw new EmpregadoNaoExisteException();
         }
     }
     //--------------------------------------------------------
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     public void lancaCartao(String id,String data,String hora) throws EmpregadoNaoExisteException{
-        if(!banco.bancoDeHoras.containsKey(data)){
+        if(banco.bancoDeHoras.containsKey(id) && banco.empregados.get(id) instanceof Horista){
+            banco.bancoDeHoras.get(id).put(data,hora);
+        }else{
             throw new EmpregadoNaoExisteException();
         }
-        banco.bancoDeHoras.get(id).put(data,hora);
     }
     //------------------------------------------------------
-    public String getHorasTrabalhadas(String id,String data_inicial,String data_final,String hora) throws EmpregadoNaoExisteException{
+    public String getHorasTrabalhadas(String id,String data_inicial,String data_final) throws EmpregadoNaoExisteException{
         double total = 0;
         if(banco.bancoDeHoras.containsKey(id)){
             for(Map.Entry<String,String> e: banco.bancoDeHoras.get(id).entrySet()){
@@ -101,7 +112,7 @@ public class Facade {
         return String.valueOf(total);
     }
     //---------------------------------------------------------
-    public String getHorasExtrasTrabalhadas(String id,String data_inicial,String data_final,String hora) throws EmpregadoNaoExisteException{
+    public String getHorasExtrasTrabalhadas(String id,String data_inicial,String data_final) throws EmpregadoNaoExisteException{
         double total = 0;
         if(banco.bancoDeHoras.containsKey(id) && banco.empregados.get(id).getTipo().equals("horista")){
             for(Map.Entry<String,String> e: banco.bancoDeHoras.get(id).entrySet()){
@@ -110,7 +121,7 @@ public class Facade {
                     return String.valueOf(total);
                 }
                 if(!data.isBefore(LocalDate.parse(data_inicial,formatter))){
-                    double hrs = Double.parseDouble(e.getValue());+
+                    double hrs = Double.parseDouble(e.getValue());
                     if(hrs > 8){
                         total += hrs - 8;
                     }
@@ -123,7 +134,7 @@ public class Facade {
     }
     //------------------------------------------------------
     public void lancaVenda(String id,String data,String valor) throws EmpregadoNaoExisteException{
-        if(banco.bancoDeHoras.containsKey(id)){
+        if(banco.bancoDeHoras.containsKey(id) && banco.empregados.get(id) instanceof Comissionado){
             banco.bancoDeHoras.get(id).put(data,valor);
         }else{
             throw new EmpregadoNaoExisteException();
@@ -132,7 +143,7 @@ public class Facade {
     //------------------------------------------------------
     public String getVendasRealizadas(String id,String data_inicial,String data_final) throws EmpregadoNaoExisteException{
         double total = 0;
-        if(banco.bancoDeHoras.containsKey(id) && banco.empregados.get(id).getTipo().equals("comissionado")){
+        if(banco.bancoDeHoras.containsKey(id) && banco.empregados.get(id) instanceof Comissionado){
             for(Map.Entry<String,String> e: banco.bancoDeHoras.get(id).entrySet()){
                 LocalDate data =  LocalDate.parse(e.getKey(),formatter);
                 if(!data.isBefore(LocalDate.parse(data_final,formatter))){
@@ -148,6 +159,7 @@ public class Facade {
         return String.valueOf(total);
     }
     //-----------------------------------------------------------
+
 
 }
 
