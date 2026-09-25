@@ -2,7 +2,6 @@ package br.ufal.ic.p2.wepayu;
 import br.ufal.ic.p2.wepayu.models.Comissionado;
 import br.ufal.ic.p2.wepayu.models.Horista;
 import com.thoughtworks.xstream.XStream;
-import br.ufal.ic.p2.wepayu.models.Assalariado;
 import br.ufal.ic.p2.wepayu.models.Empregado;
 
 import java.io.File;
@@ -11,10 +10,11 @@ import java.time.LocalDate;
 import java.util.*;
 
 public class Banco {
-    private static final String ARQUIVO = "persistencia.XML";
+    public static final String ARQUIVO = "persistencia.XML";
     private int instancia = 1;
     SequencedMap<String, Empregado> empregados = new LinkedHashMap<>();
     Map<String, Map<String, String>> bancoDeHoras = new LinkedHashMap<>();
+    Map<String, Map<String, String>> sindicato = new LinkedHashMap<>();
     public Banco(){
         carregar();
     }
@@ -22,14 +22,19 @@ public class Banco {
         empregados.clear();
         bancoDeHoras.clear();
         instancia = 1;
+        File arquivo = new File(ARQUIVO);
+        arquivo.delete();
     }
     public void add(Empregado e){
         String id = "id" + instancia;
         instancia++;
         empregados.put(id,e);
-        if(!(e instanceof Assalariado)){
+        if(e.getClass() != Empregado.class){
             bancoDeHoras.put(id,new LinkedHashMap<>());
         }
+    }
+    public void add_sindicato(String id_sindicato){
+        sindicato.put(id_sindicato,new  LinkedHashMap<>());
     }
     private XStream configurarXStream() {
 
@@ -37,7 +42,6 @@ public class Banco {
         XStream.setupDefaultSecurity(xstream);
         xstream.allowTypes(new Class[] {
                 Horista.class,
-                Assalariado.class,
                 Comissionado.class,
                 Empregado.class,
                 Banco.class
@@ -69,6 +73,7 @@ public class Banco {
             this.instancia = bancoSalvo.instancia;
             this.empregados = bancoSalvo.empregados;
             this.bancoDeHoras = bancoSalvo.bancoDeHoras;
+            this.sindicato = bancoSalvo.sindicato;
         } catch (Exception e) {
             throw new RuntimeException("Erro ao carregar persistencia.", e);
         }

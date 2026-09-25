@@ -5,13 +5,13 @@ import br.ufal.ic.p2.wepayu.Exception.EmpregadoNaoExisteException;
 import java.text.DecimalFormat;
 
 public class Empregado {
-    private String nome;
-    private String endereco;
-    private String tipo;
-    private String salario;
-    private int sindicalizado;
-    public String data_ponto;
-    public String hora_ponto;
+    public String nome;
+    public String endereco;
+    public String tipo;
+    public String salario;
+    public boolean sindicalizado = false;
+    public String id_sindicato = null;
+    public String taxa_sindical =  null;
     public Empregado(String nome, String endereco, String tipo, String salario){
         this.nome = nome;
         this.endereco = endereco;
@@ -35,6 +35,9 @@ public class Empregado {
     }
 
     public String getSalario() {
+        if(!salario.contains(",")){
+           return salario + ",00";
+        }
         return salario;
     }
 
