@@ -21,6 +21,7 @@ public class Banco {
     public void clear(){
         empregados.clear();
         bancoDeHoras.clear();
+        sindicato.clear();
         instancia = 1;
         File arquivo = new File(ARQUIVO);
         arquivo.delete();
@@ -33,8 +34,36 @@ public class Banco {
             bancoDeHoras.put(id,new LinkedHashMap<>());
         }
     }
+    public void re_add(String id,Empregado e){
+        empregados.put(id,e);
+    }
     public void add_sindicato(String id_sindicato){
         sindicato.put(id_sindicato,new  LinkedHashMap<>());
+    }
+    public void trocar_tipo(String id,String tipo_novo,String valor){
+        Empregado e = empregados.get(id);
+        Empregado novo;
+        if(!(e.tipo.equals(tipo_novo))){
+            if(tipo_novo.equals("assalariado")){
+                novo = new Empregado(e.nome,e.endereco,tipo_novo,valor);
+                bancoDeHoras.remove(id);
+            }
+            else if(tipo_novo.equals("horista")){
+                novo = new Horista(e.nome,e.endereco,tipo_novo,valor);
+                bancoDeHoras.put(id, new LinkedHashMap<>());
+            }else{
+                novo = new Comissionado(e.nome,e.endereco,tipo_novo,e.salario,valor);
+                bancoDeHoras.put(id, new LinkedHashMap<>());
+            }
+            novo.sindicalizado = e.sindicalizado;
+            novo.id_sindicato = e.id_sindicato;
+            novo.taxa_sindical =  e.taxa_sindical;
+            novo.metodoPagamento = e.metodoPagamento;
+            novo.banco = e.banco;
+            novo.agencia = e.agencia;
+            novo.contaCorrente = e.contaCorrente;
+            re_add(id,novo);
+        }
     }
     private XStream configurarXStream() {
 

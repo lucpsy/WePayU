@@ -12,6 +12,10 @@ public class Empregado {
     public boolean sindicalizado = false;
     public String id_sindicato = null;
     public String taxa_sindical =  null;
+    public String metodoPagamento = "emMaos";
+    public String banco = null;
+    public String agencia = null;
+    public String contaCorrente = null;
     public Empregado(String nome, String endereco, String tipo, String salario){
         this.nome = nome;
         this.endereco = endereco;
@@ -40,5 +44,10 @@ public class Empregado {
         }
         return salario;
     }
-
+    public String getTaxa(){
+        if(!taxa_sindical.contains(",")){
+            taxa_sindical+=",00";
+        }
+        return taxa_sindical;
+    }
 }

@@ -111,7 +111,7 @@ expectError "Comissao nao pode ser nula." alteraEmpregado emp=${id1} atributo=co
 expectError "Comissao deve ser numerica." alteraEmpregado emp=${id1} atributo=comissao valor=a
 expectError "Comissao deve ser nao-negativa." alteraEmpregado emp=${id1} atributo=comissao valor=-1
 expectError "Metodo de pagamento invalido." alteraEmpregado emp=${id1} atributo=metodoPagamento valor=abc
-expectError "br.ufal.ic.p2.wepayu.Banco nao pode ser nulo." alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="" agencia=1591-1 contaCorrente=51000-0
+expectError "Banco nao pode ser nulo." alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="" agencia=1591-1 contaCorrente=51000-0
 expectError "Agencia nao pode ser nulo." alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="br.ufal.ic.p2.wepayu.Banco do Brasil" agencia="" contaCorrente=51000-0
 expectError "Conta corrente nao pode ser nulo." alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="br.ufal.ic.p2.wepayu.Banco do Brasil" agencia=1591-1 contaCorrente=""
 expectError "Valor deve ser true ou false." alteraEmpregado emp=${id1} atributo=sindicalizado valor=abc
