@@ -6,7 +6,6 @@ import br.ufal.ic.p2.wepayu.models.Empregado;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.time.LocalDate;
 import java.util.*;
 
 public class Banco {

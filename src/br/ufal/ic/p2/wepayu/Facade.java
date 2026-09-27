@@ -648,7 +648,7 @@ public class Facade {
                 metodo = e.banco + ", Ag. " + e.agencia + " CC " + e.contaCorrente;
             }
             folha.append(String.format(
-                    Locale.US, "%-48+s %13s %9s %15s %s%n", e.nome, formatar(salario_bruto), formatar(descontos),
+                    Locale.US, "%-48s %13s %9s %15s %s%n", e.nome, formatar(salario_bruto), formatar(descontos),
                     formatar(salario_liquido), metodo));
         }
         folha.append(String.format(
