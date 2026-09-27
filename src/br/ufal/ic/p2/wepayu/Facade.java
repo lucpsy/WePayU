@@ -162,41 +162,50 @@ public class Facade {
         if(id.isEmpty()) throw new IdentificacaoNulaException();
         if(banco.empregados.containsKey(id)){
             Empregado e =  banco.empregados.get(id);
-            if(atributo.equals("nome")){
-                return e.getNome();
-            }
-            else if(atributo.equals("endereco")){
-                return e.getEndereco();
-            }
-            else if(atributo.equals("tipo")){
-                return e.getTipo();
-            }
-            else if(atributo.equals("salario")){
-                return e.getSalario();
-            }else if(atributo.equals("comissao")){
-                if(!(e instanceof Comissionado)) throw new NaoComissionadoException();
-                else return ((Comissionado)e).getComissao();
-            }else if (atributo.equals("sindicalizado")){
-                return Boolean.toString(e.sindicalizado);
-            }else if(atributo.equals("idSindicato")){
-                if(!e.sindicalizado) throw new NaoSindicalizadoException();
-                else return e.id_sindicato;
-            }else if(atributo.equals("taxaSindical")){
-                if(!e.sindicalizado) throw new NaoSindicalizadoException();
-                else return e.getTaxa();
-            }else if(atributo.equals("metodoPagamento")){
-                return e.metodoPagamento;
-            }else if(atributo.equals("banco")){
-                if(!e.metodoPagamento.equals("banco")) throw new NaoBancoException();
-                else return e.banco;
-            }else if(atributo.equals("agencia")){
-                if(!e.metodoPagamento.equals("banco")) throw new NaoBancoException();
-                else return e.agencia;
-            }else if(atributo.equals("contaCorrente")){
-                if(!e.metodoPagamento.equals("banco")) throw new NaoBancoException();
-                else return e.contaCorrente;
-            }else{
-                throw new AtributoInexistenteException();
+            switch (atributo) {
+                case "nome" -> {
+                    return e.getNome();
+                }
+                case "endereco" -> {
+                    return e.getEndereco();
+                }
+                case "tipo" -> {
+                    return e.getTipo();
+                }
+                case "salario" -> {
+                    return e.getSalario();
+                }
+                case "comissao" -> {
+                    if (!(e instanceof Comissionado)) throw new NaoComissionadoException();
+                    return ((Comissionado) e).getComissao();
+                }
+                case "sindicalizado" -> {
+                    return Boolean.toString(e.sindicalizado);
+                }
+                case "idSindicato" -> {
+                    if (!e.sindicalizado) throw new NaoSindicalizadoException();
+                    return e.id_sindicato;
+                }
+                case "taxaSindical" -> {
+                    if (!e.sindicalizado) throw new NaoSindicalizadoException();
+                    return e.getTaxa();
+                }
+                case "metodoPagamento" -> {
+                    return e.metodoPagamento;
+                }
+                case "banco" -> {
+                    if (!e.metodoPagamento.equals("banco")) throw new NaoBancoException();
+                    return e.banco;
+                }
+                case "agencia" -> {
+                    if (!e.metodoPagamento.equals("banco")) throw new NaoBancoException();
+                    return e.agencia;
+                }
+                case "contaCorrente" -> {
+                    if (!e.metodoPagamento.equals("banco")) throw new NaoBancoException();
+                    return e.contaCorrente;
+                }
+                default -> throw new AtributoInexistenteException();
             }
         }else{
            throw new EmpregadoNaoExisteException();
@@ -208,42 +217,50 @@ public class Facade {
         if(id.isEmpty()) throw new IdentificacaoNulaException();
         if(!banco.empregados.containsKey(id)) throw new EmpregadoNaoExisteException();
         Empregado e =  banco.empregados.get(id);
-        if(atributo.equals("nome")){
-            if(valor.isEmpty()) throw new NomeNuloException();
-            e.nome = valor;
-        }
-        else if(atributo.equals("endereco")){
-            if(valor.isEmpty()) throw new EnderecoNuloException();
-            e.endereco = valor;
-        }
-        else if(atributo.equals("salario")){
-            if(valor.isEmpty()) throw new SalarioNuloException();
-            if(valor.replace(",","").chars().anyMatch(Character::isLetter)) throw new SalarioNaoNumericoException();
-            if(Double.parseDouble(valor.replace(",",".")) <= 0) throw new SalarioNegativoException();
-            e.salario = valor;
-        }else if(atributo.equals("comissao")){
-            if(!(e instanceof Comissionado)) throw new NaoComissionadoException();
-            if(valor.isEmpty()) throw new ComissaoNulaException();
-            if(valor.replace(",","").chars().anyMatch(Character::isLetter)) throw new ComissaoNaoNumericaException();
-            if(Double.parseDouble(valor.replace(",",".")) <= 0) throw new ComissaoNegativaException();
-            ((Comissionado) e).comissao = valor;
-        }else if(atributo.equals("tipo")){
-            if(!(valor.equals("assalariado") || valor.equals("horista") || valor.equals("comissionado"))) throw new TipoInvalidoException();
-            banco.trocar_tipo(id,valor,e.salario);
-        }else if(atributo.equals("sindicalizado")){
-            if(!valor.equals("false")) throw new SindicalizadoInvalidoException();
-            e.sindicalizado = false;
-            banco.sindicato.remove(e.id_sindicato);
-            e.id_sindicato = null;
-            e.taxa_sindical = null;
-        }else if(atributo.equals("metodoPagamento")){
-            if(!(valor.equals("emMaos") || valor.equals("correios"))) throw new MetodoInvalidoException();
-            e.metodoPagamento = valor;
-            e.banco = null;
-            e.agencia = null;
-            e.contaCorrente = null;
-        }else{
-            throw new AtributoInexistenteException();
+        switch (atributo) {
+            case "nome" -> {
+                if (valor.isEmpty()) throw new NomeNuloException();
+                e.nome = valor;
+            }
+            case "endereco" -> {
+                if (valor.isEmpty()) throw new EnderecoNuloException();
+                e.endereco = valor;
+            }
+            case "salario" -> {
+                if (valor.isEmpty()) throw new SalarioNuloException();
+                if (valor.replace(",", "").chars().anyMatch(Character::isLetter))
+                    throw new SalarioNaoNumericoException();
+                if (Double.parseDouble(valor.replace(",", ".")) <= 0) throw new SalarioNegativoException();
+                e.salario = valor;
+            }
+            case "comissao" -> {
+                if (!(e instanceof Comissionado)) throw new NaoComissionadoException();
+                if (valor.isEmpty()) throw new ComissaoNulaException();
+                if (valor.replace(",", "").chars().anyMatch(Character::isLetter))
+                    throw new ComissaoNaoNumericaException();
+                if (Double.parseDouble(valor.replace(",", ".")) <= 0) throw new ComissaoNegativaException();
+                ((Comissionado) e).comissao = valor;
+            }
+            case "tipo" -> {
+                if (!(valor.equals("assalariado") || valor.equals("horista") || valor.equals("comissionado")))
+                    throw new TipoInvalidoException();
+                banco.trocar_tipo(id, valor, e.salario);
+            }
+            case "sindicalizado" -> {
+                if (!valor.equals("false")) throw new SindicalizadoInvalidoException();
+                e.sindicalizado = false;
+                banco.sindicato.remove(e.id_sindicato);
+                e.id_sindicato = null;
+                e.taxa_sindical = null;
+            }
+            case "metodoPagamento" -> {
+                if (!(valor.equals("emMaos") || valor.equals("correios"))) throw new MetodoInvalidoException();
+                e.metodoPagamento = valor;
+                e.banco = null;
+                e.agencia = null;
+                e.contaCorrente = null;
+            }
+            default -> throw new AtributoInexistenteException();
         }
         finalizarComando(estadoAnterior);
     }
@@ -490,7 +507,7 @@ public class Facade {
         DateTimeFormatter entrada = DateTimeFormatter.ofPattern("d/M/uuuu");
         LocalDate data_l = LocalDate.parse(data,entrada);
         StringBuilder folha = new StringBuilder();
-        folha.append("FOLHA DE PAGAMENTO DO DIA ").append(data_l.toString()).append("\n");
+        folha.append("FOLHA DE PAGAMENTO DO DIA ").append(data_l).append("\n");
         folha.append("====================================\n");
         LocalDate data_folha = LocalDate.parse(data,formatter);
         double total = 0;
@@ -520,18 +537,21 @@ public class Facade {
         listaAssalariados.sort(Comparator.comparing(entry -> entry.getValue().nome));
         List<Map.Entry<String, Empregado>> listaComissionados = new ArrayList<>(comissionados.entrySet());
         listaComissionados.sort(Comparator.comparing(entry -> entry.getValue().nome));
-        folha.append("\n===============================================================================================================================\n" +
-                "===================== HORISTAS ================================================================================================\n" +
-                "===============================================================================================================================\n" +
-                "Nome                                 Horas Extra Salario Bruto Descontos Salario Liquido Metodo\n" +
-                "==================================== ===== ===== ============= ========= =============== ======================================\n");
+        folha.append("""
+                
+                ===============================================================================================================================
+                ===================== HORISTAS ================================================================================================
+                ===============================================================================================================================
+                Nome                                 Horas Extra Salario Bruto Descontos Salario Liquido Metodo
+                ==================================== ===== ===== ============= ========= =============== ======================================
+                """);
         double total_hora = 0;
         double total_extra = 0;
         double total_bruto = 0;
         double total_desconto = 0;
         double total_liquido = 0;
         for(Map.Entry<String,Empregado> horista: listaHoristas){
-            double salario_liquido = 0;
+            double salario_liquido;
             double salario_bruto = 0;
             double descontos = 0;
             String id = horista.getKey();
@@ -568,6 +588,7 @@ public class Facade {
                             primeiraData = ponto;
                         }
                     }
+                    assert primeiraData != null;
                     long dias = ChronoUnit.DAYS.between(primeiraData,data_folha) + 1;
                     descontos += taxa * dias;
                 }else{
@@ -608,19 +629,21 @@ public class Facade {
                 Locale.US,
                 "\nTOTAL HORISTAS                       %5s %5s %13s %9s %15s\n", (int)total_hora, (int)total_extra,
                 formatar(total_bruto), formatar(total_desconto), formatar(total_liquido)));
-        folha.append("\n===============================================================================================================================\n" +
-                "===================== ASSALARIADOS ============================================================================================\n" +
-                "===============================================================================================================================\n" +
-                "Nome                                             Salario Bruto Descontos Salario Liquido Metodo\n" +
-                "================================================ ============= ========= =============== ======================================\n");
+        folha.append("""
+                
+                ===============================================================================================================================
+                ===================== ASSALARIADOS ============================================================================================
+                ===============================================================================================================================
+                Nome                                             Salario Bruto Descontos Salario Liquido Metodo
+                ================================================ ============= ========= =============== ======================================
+                """);
         total_bruto = 0;
         total_desconto = 0;
         total_liquido = 0;
         for(Map.Entry<String,Empregado> assalariado: listaAssalariados){
-            double salario_liquido = 0;
-            double salario_bruto = 0;
+            double salario_liquido;
+            double salario_bruto;
             double descontos = 0;
-            String id = assalariado.getKey();
             Empregado e = assalariado.getValue();
             salario_bruto = Double.parseDouble(e.salario.replace(",","."));
             if(e.sindicalizado){
@@ -656,11 +679,14 @@ public class Facade {
                 "\nTOTAL ASSALARIADOS                               %13s %9s %15s\n", formatar(total_bruto),
                 formatar(total_desconto), formatar(total_liquido)
         ));
-        folha.append("\n===============================================================================================================================\n" +
-                "===================== COMISSIONADOS ===========================================================================================\n" +
-                "===============================================================================================================================\n" +
-                "Nome                  Fixo     Vendas   Comissao Salario Bruto Descontos Salario Liquido Metodo\n" +
-                "===================== ======== ======== ======== ============= ========= =============== ======================================\n");
+        folha.append("""
+                
+                ===============================================================================================================================
+                ===================== COMISSIONADOS ===========================================================================================
+                ===============================================================================================================================
+                Nome                  Fixo     Vendas   Comissao Salario Bruto Descontos Salario Liquido Metodo
+                ===================== ======== ======== ======== ============= ========= =============== ======================================
+                """);
 
         double total_fixo = 0;
         double total_vendas = 0;
@@ -669,7 +695,7 @@ public class Facade {
         total_desconto = 0;
         total_liquido = 0;
         for(Map.Entry<String,Empregado> comissionado: listaComissionados){
-            double salario_liquido = 0;
+            double salario_liquido;
             double salario_bruto = 0;
             double descontos = 0;
             String id = comissionado.getKey();
@@ -733,7 +759,7 @@ public class Facade {
         finalizarComando(estadoAnterior);
     }
     //---------------------------------------------------------------------------------
-    public String totalFolha(String data) throws Exception{
+    public String totalFolha(String data){
         LocalDate data_folha = LocalDate.parse(data,formatter);
         double total = 0;
         boolean fim_de_mes = false;
