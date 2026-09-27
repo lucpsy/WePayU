@@ -16,19 +16,93 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 public class Facade {
+    private static class RegistroHistorico {
+        String antes;
+        String depois;
+        RegistroHistorico(String antes, String depois) {
+            this.antes = antes;
+            this.depois = depois;
+        }
+    }
     Banco banco = new Banco();
     Deque<RegistroHistorico> undo = new ArrayDeque<>();
     Deque<RegistroHistorico> redo = new ArrayDeque<>();
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d/M/uuuu").withResolverStyle(ResolverStyle.STRICT);
+    boolean encerrado = false;
+    //-------------------------------------------------------
+    private String iniciarComando() throws Exception {
+        if (encerrado) {
+            throw new Exception("Nao pode dar comandos depois de encerrarSistema.");
+        }
+
+        return banco.snapshot();
+    }
+    //-------------------------------------------------------------------------------
+    private void finalizarComando(String estadoAnterior) {
+        String estadoDepois = banco.snapshot();
+        undo.push(new RegistroHistorico(estadoAnterior, estadoDepois));
+        redo.clear();
+    }
+    //--------------------------------------------------------------------------------
+    private String formatar(double valor) {
+        return String.format(Locale.US, "%.2f", valor).replace(".", ",");
+    }
+    //-----------------------------------------------------------------------------------
+    private boolean recebeuNaFolhaHorista(String id, LocalDate dataFolha) {
+        Map<String, String> registros = banco.bancoDeHoras.get(id);
+        if (registros == null) {
+            return false;
+        }
+        for (Map.Entry<String, String> registro : registros.entrySet()) {
+            LocalDate data = LocalDate.parse(registro.getKey(), formatter);
+            long periodo = ChronoUnit.DAYS.between(data, dataFolha);
+            if (periodo > 0 && periodo < 7) {
+                double horas = Double.parseDouble(
+                        registro.getValue().replace(",", ".")
+                );
+                if (horas > 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    //------------------------------------------------------------------------------------
+    private LocalDate ultimaDataPagamentoHorista(String id, LocalDate dataFolha) {
+        Map<String, String> registros = banco.bancoDeHoras.get(id);
+        LocalDate primeiraData = null;
+        for (String dataStr : registros.keySet()) {
+            LocalDate data = LocalDate.parse(dataStr, formatter);
+
+            if (primeiraData == null || data.isBefore(primeiraData)) {
+                primeiraData = data;
+            }
+        }
+        LocalDate candidata = dataFolha.minusDays(7);
+        while (!candidata.isBefore(primeiraData)) {
+
+            if (recebeuNaFolhaHorista(id, candidata)) {
+                return candidata;
+            }
+
+            candidata = candidata.minusDays(7);
+        }
+        return null;
+    }
     //-------------------------------------------------------
     public void encerrarSistema(){
         banco.salvar();
+        encerrado = true;
     }
-    public void zerarSistema(){
+    //--------------------------------------------------------
+    public void zerarSistema() throws Exception {
+        String estadoAnterior = iniciarComando();
         banco.clear();
+        finalizarComando(estadoAnterior);
     }
-    //-------------------------------------------------------
+    //----------------------------------------------------------------------------------------
     public String criarEmpregado(String nome,String endereco,String tipo,String salario) throws Exception{
+        String estadoAnterior = iniciarComando();
         if(nome.isEmpty()) throw new NomeNuloException();
         if(endereco.isEmpty()) throw new EnderecoNuloException();
         if(salario.isEmpty()) throw new SalarioNuloException();
@@ -46,10 +120,12 @@ public class Facade {
         }else{
             banco.add(new Empregado(nome,endereco,tipo,salario));
         }
+        finalizarComando(estadoAnterior);
         return  banco.empregados.lastEntry().getKey();
     }
     //-------------------------------------------------------
     public String criarEmpregado(String nome,String endereco,String tipo,String salario,String comissao) throws Exception{
+        String estadoAnterior = iniciarComando();
         if(nome.isEmpty()) throw new NomeNuloException();
         if(endereco.isEmpty()) throw new EnderecoNuloException();
         if(salario.isEmpty()) throw new SalarioNuloException();
@@ -66,6 +142,7 @@ public class Facade {
                 throw new TipoInvalidoException();
         }
         banco.add(new Comissionado(nome,endereco,tipo,salario,comissao));
+        finalizarComando(estadoAnterior);
         return banco.empregados.lastEntry().getKey();
     }
     //--------------------------------------------------------
@@ -127,6 +204,7 @@ public class Facade {
     }
     //-----------------------------------------------------
     public void alteraEmpregado(String id,String atributo,String valor)throws Exception{
+        String estadoAnterior = iniciarComando();
         if(id.isEmpty()) throw new IdentificacaoNulaException();
         if(!banco.empregados.containsKey(id)) throw new EmpregadoNaoExisteException();
         Empregado e =  banco.empregados.get(id);
@@ -167,8 +245,10 @@ public class Facade {
         }else{
             throw new AtributoInexistenteException();
         }
+        finalizarComando(estadoAnterior);
     }
     public void alteraEmpregado(String id,String atributo,String valor,String id_sindicato,String taxa_sindical) throws Exception{
+        String estadoAnterior = iniciarComando();
         if(id.isEmpty()) throw new IdentificacaoNulaException();
         if(!valor.equals("true")) throw new SindicalizadoInvalidoException();
         if(id_sindicato.isEmpty()) throw new IdentificacaoSindicatoNulaException();
@@ -182,9 +262,11 @@ public class Facade {
         e.id_sindicato = id_sindicato;
         e.taxa_sindical = taxa_sindical;
         banco.add_sindicato(id_sindicato);
+        finalizarComando(estadoAnterior);
     }
     //-----------------------------------------------------
     public void alteraEmpregado(String id,String metodo,String valor1,String banco_Nome,String agencia,String contaCorrente) throws Exception{
+        String estadoAnterior = iniciarComando();
         if(id.isEmpty()) throw new IdentificacaoNulaException();
         if(!banco.empregados.containsKey(id)) throw new EmpregadoNaoExisteException();
         if(!valor1.equals("banco")) throw new MetodoInvalidoException();
@@ -196,16 +278,20 @@ public class Facade {
         e.banco = banco_Nome;
         e.agencia = agencia;
         e.contaCorrente = contaCorrente;
+        finalizarComando(estadoAnterior);
     }
     //------------------------------------------------------
     public void alteraEmpregado(String id, String atributo,String tipo_novo,String valor) throws Exception{
+        String estadoAnterior = iniciarComando();
         if(id.isEmpty()) throw new IdentificacaoNulaException();
         if(!banco.empregados.containsKey(id)) throw new EmpregadoNaoExisteException();
         if(!(tipo_novo.equals("assalariado") || tipo_novo.equals("horista") || tipo_novo.equals("comissionado"))) throw new TipoInvalidoException();
         banco.trocar_tipo(id,tipo_novo,valor);
+        finalizarComando(estadoAnterior);
     }
     //--------------------------------------------------------
     public void removerEmpregado(String id) throws Exception{
+        String estadoAnterior = iniciarComando();
         if(id.isEmpty()) throw new IdentificacaoNulaException();
         if(banco.empregados.containsKey(id)){
             banco.sindicato.remove(banco.empregados.get(id).id_sindicato);
@@ -214,9 +300,11 @@ public class Facade {
         }else {
             throw new EmpregadoNaoExisteException();
         }
+        finalizarComando(estadoAnterior);
     }
     //--------------------------------------------------------
     public void lancaCartao(String id,String data,String hora) throws Exception{
+        String estadoAnterior = iniciarComando();
         if(id.isEmpty()) throw new IdentificacaoNulaException();
         if(!banco.empregados.containsKey(id)) throw new EmpregadoNaoExisteException();
         if(!(banco.empregados.get(id) instanceof Horista)) throw new NaoHoristaException();
@@ -228,6 +316,7 @@ public class Facade {
         }
         if(Double.parseDouble(hora.replace(",","")) <= 0) throw new HoraNegativaException();
         banco.bancoDeHoras.get(id).put(data,hora);
+        finalizarComando(estadoAnterior);
     }
     //------------------------------------------------------
     public String getHorasNormaisTrabalhadas(String id,String data_inicial,String data_final) throws Exception{
@@ -299,6 +388,7 @@ public class Facade {
     }
     //------------------------------------------------------
     public void lancaVenda(String id,String data,String valor) throws Exception{
+        String estadoAnterior = iniciarComando();
         if(id.isEmpty()) throw new IdentificacaoNulaException();
         if(!banco.empregados.containsKey(id)) throw new EmpregadoNaoExisteException();
         if(!(banco.empregados.get(id) instanceof Comissionado)) throw new NaoComissionadoException();
@@ -311,6 +401,7 @@ public class Facade {
         if(valor.replace(",","").chars().anyMatch(Character::isLetter)) throw new ValorNaoNumericoException();
         if(Double.parseDouble(valor.replace(",",".")) <= 0) throw new ValorNegativoException();
         banco.bancoDeHoras.get(id).put(data,valor);
+        finalizarComando(estadoAnterior);
     }
     //------------------------------------------------------
     public String getVendasRealizadas(String id,String data_inicial,String data_final) throws Exception{
@@ -345,6 +436,7 @@ public class Facade {
     }
     //-----------------------------------------------------------
     public void lancaTaxaServico (String id,String data,String valor) throws Exception{
+        String estadoAnterior = iniciarComando();
         if(id.isEmpty()) throw new MembroNuloException();
         if(!banco.sindicato.containsKey(id)) throw new MembroInexistenteException();
         try{
@@ -356,6 +448,7 @@ public class Facade {
         if(valor.replace(",","").chars().anyMatch(Character::isLetter)) throw new ValorNaoNumericoException();
         if(Double.parseDouble(valor.replace(",",".")) <= 0) throw new ValorNegativoException();
         banco.sindicato.get(id).put(data,valor);
+        finalizarComando(estadoAnterior);
     }
     //----------------------------------------------------------------------
     public String getTaxasServico(String id,String data_inicial,String data_final) throws Exception{
@@ -391,54 +484,9 @@ public class Facade {
         String total_s = String.valueOf(total_d);
         return total_s.replace(".",",") + "0";
     }
-    //--------------------------------------------------------------------------------
-    private String formatar(double valor) {
-        return String.format(Locale.US, "%.2f", valor).replace(".", ",");
-    }
-    //-----------------------------------------------------------------------------------
-    private boolean recebeuNaFolhaHorista(String id, LocalDate dataFolha) {
-        Map<String, String> registros = banco.bancoDeHoras.get(id);
-        if (registros == null) {
-            return false;
-        }
-        for (Map.Entry<String, String> registro : registros.entrySet()) {
-            LocalDate data = LocalDate.parse(registro.getKey(), formatter);
-            long periodo = ChronoUnit.DAYS.between(data, dataFolha);
-            if (periodo > 0 && periodo < 7) {
-                double horas = Double.parseDouble(
-                        registro.getValue().replace(",", ".")
-                );
-                if (horas > 0) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    //------------------------------------------------------------------------------------
-    private LocalDate ultimaDataPagamentoHorista(String id, LocalDate dataFolha) {
-        Map<String, String> registros = banco.bancoDeHoras.get(id);
-        LocalDate primeiraData = null;
-        for (String dataStr : registros.keySet()) {
-            LocalDate data = LocalDate.parse(dataStr, formatter);
-
-            if (primeiraData == null || data.isBefore(primeiraData)) {
-                primeiraData = data;
-            }
-        }
-        LocalDate candidata = dataFolha.minusDays(7);
-        while (!candidata.isBefore(primeiraData)) {
-
-            if (recebeuNaFolhaHorista(id, candidata)) {
-                return candidata;
-            }
-
-            candidata = candidata.minusDays(7);
-        }
-        return null;
-    }
     //-------------------------------------------------------------------------------------
     public void rodaFolha(String data,String saida) throws Exception{
+        String estadoAnterior = iniciarComando();
         DateTimeFormatter entrada = DateTimeFormatter.ofPattern("d/M/uuuu");
         LocalDate data_l = LocalDate.parse(data,entrada);
         StringBuilder folha = new StringBuilder();
@@ -682,6 +730,7 @@ public class Facade {
         try (PrintWriter arquivo = new PrintWriter(saida)) {
             arquivo.print(folha);
         }
+        finalizarComando(estadoAnterior);
     }
     //---------------------------------------------------------------------------------
     public String totalFolha(String data) throws Exception{
@@ -730,11 +779,30 @@ public class Facade {
         }
         return String.format(Locale.US, "%.2f", total).replace(".", ",");
     }
-    public void undo(){
-
+    public void undo() throws Exception {
+        if (encerrado) {
+            throw new Exception("Nao pode dar comandos depois de encerrarSistema.");
+        }
+        if (undo.isEmpty()) {
+            throw new Exception("Nao ha comando a desfazer.");
+        }
+        RegistroHistorico registro = undo.pop();
+        banco.restaurarSnapshot(registro.antes);
+        redo.push(registro);
     }
-    public void redo(){
-
+    public void redo() throws Exception {
+        if (encerrado) {
+            throw new Exception("Nao pode dar comandos depois de encerrarSistema.");
+        }
+        if (redo.isEmpty()) {
+            throw new Exception("Nao ha comando a refazer.");
+        }
+        RegistroHistorico registro = redo.pop();
+        banco.restaurarSnapshot(registro.depois);
+        undo.push(registro);
+    }
+    public String getNumeroDeEmpregados(){
+        return String.valueOf(banco.empregados.size());
     }
 }
 
