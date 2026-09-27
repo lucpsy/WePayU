@@ -13,8 +13,8 @@ public class Banco {
     public static final String ARQUIVO = "persistencia.XML";
     private int instancia = 1;
     SequencedMap<String, Empregado> empregados = new LinkedHashMap<>();
-    Map<String, Map<String, String>> bancoDeHoras = new LinkedHashMap<>();
-    Map<String, Map<String, String>> sindicato = new LinkedHashMap<>();
+    SequencedMap<String, SequencedMap<String, String>> bancoDeHoras = new LinkedHashMap<>();
+    SequencedMap<String, SequencedMap<String, String>> sindicato = new LinkedHashMap<>();
     public Banco(){
         carregar();
     }
@@ -106,5 +106,19 @@ public class Banco {
         } catch (Exception e) {
             throw new RuntimeException("Erro ao carregar persistencia.", e);
         }
+    }
+    public String snapshot() {
+        XStream xstream = configurarXStream();
+        return xstream.toXML(this);
+    }
+    public void restaurarSnapshot(String xml) {
+        XStream xstream = configurarXStream();
+
+        Banco bancoSalvo = (Banco) xstream.fromXML(xml);
+
+        this.instancia = bancoSalvo.instancia;
+        this.empregados = bancoSalvo.empregados;
+        this.bancoDeHoras = bancoSalvo.bancoDeHoras;
+        this.sindicato = bancoSalvo.sindicato;
     }
 }

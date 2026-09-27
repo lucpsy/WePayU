@@ -5,6 +5,7 @@ import br.ufal.ic.p2.wepayu.models.Comissionado;
 import br.ufal.ic.p2.wepayu.models.Empregado;
 import br.ufal.ic.p2.wepayu.models.Horista;
 
+import java.io.PrintWriter;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -12,13 +13,12 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Facade {
     Banco banco = new Banco();
+    Deque<RegistroHistorico> undo = new ArrayDeque<>();
+    Deque<RegistroHistorico> redo = new ArrayDeque<>();
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d/M/uuuu").withResolverStyle(ResolverStyle.STRICT);
     //-------------------------------------------------------
     public void encerrarSistema(){
@@ -392,80 +392,349 @@ public class Facade {
         return total_s.replace(".",",") + "0";
     }
     //--------------------------------------------------------------------------------
-    public void rodaFolha(String data,String saida) throws Exception{
-
+    private String formatar(double valor) {
+        return String.format(Locale.US, "%.2f", valor).replace(".", ",");
     }
-    public String totalFolha(String data) throws Exception{
-        LocalDate local_data = LocalDate.parse(data,formatter);
+    //-----------------------------------------------------------------------------------
+    private boolean recebeuNaFolhaHorista(String id, LocalDate dataFolha) {
+        Map<String, String> registros = banco.bancoDeHoras.get(id);
+        if (registros == null) {
+            return false;
+        }
+        for (Map.Entry<String, String> registro : registros.entrySet()) {
+            LocalDate data = LocalDate.parse(registro.getKey(), formatter);
+            long periodo = ChronoUnit.DAYS.between(data, dataFolha);
+            if (periodo > 0 && periodo < 7) {
+                double horas = Double.parseDouble(
+                        registro.getValue().replace(",", ".")
+                );
+                if (horas > 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+    //------------------------------------------------------------------------------------
+    private LocalDate ultimaDataPagamentoHorista(String id, LocalDate dataFolha) {
+        Map<String, String> registros = banco.bancoDeHoras.get(id);
+        LocalDate primeiraData = null;
+        for (String dataStr : registros.keySet()) {
+            LocalDate data = LocalDate.parse(dataStr, formatter);
+
+            if (primeiraData == null || data.isBefore(primeiraData)) {
+                primeiraData = data;
+            }
+        }
+        LocalDate candidata = dataFolha.minusDays(7);
+        while (!candidata.isBefore(primeiraData)) {
+
+            if (recebeuNaFolhaHorista(id, candidata)) {
+                return candidata;
+            }
+
+            candidata = candidata.minusDays(7);
+        }
+        return null;
+    }
+    //-------------------------------------------------------------------------------------
+    public void rodaFolha(String data,String saida) throws Exception{
+        DateTimeFormatter entrada = DateTimeFormatter.ofPattern("d/M/uuuu");
+        LocalDate data_l = LocalDate.parse(data,entrada);
+        StringBuilder folha = new StringBuilder();
+        folha.append("FOLHA DE PAGAMENTO DO DIA ").append(data_l.toString()).append("\n");
+        folha.append("====================================\n");
+        LocalDate data_folha = LocalDate.parse(data,formatter);
         double total = 0;
         boolean fim_de_mes = false;
         boolean quinzena = false;
         boolean sexta = false;
-        if(local_data.getDayOfMonth() == local_data.lengthOfMonth()) fim_de_mes = true;
-        if(ChronoUnit.DAYS.between(LocalDate.of(2005,1,1), local_data) % 14 == 13) quinzena = true;
-        if(local_data.getDayOfWeek() == DayOfWeek.FRIDAY)  sexta = true;
+        SequencedMap<String,Empregado> horistas = new LinkedHashMap<>();
+        SequencedMap<String,Empregado> assalariados = new LinkedHashMap<>();
+        SequencedMap<String,Empregado> comissionados = new LinkedHashMap<>();
+        if(data_folha.getDayOfMonth() == data_folha.lengthOfMonth()) fim_de_mes = true;
+        if(ChronoUnit.DAYS.between(LocalDate.of(2005,1,1), data_folha) % 14 == 13) quinzena = true;
+        if(data_folha.getDayOfWeek() == DayOfWeek.FRIDAY)  sexta = true;
+        for(Map.Entry<String, Empregado> id_emp : banco.empregados.entrySet()){
+            String id = id_emp.getKey();
+            Empregado e = id_emp.getValue();
+            if(e instanceof  Horista && sexta){
+                horistas.put(id,e);
+            }else if(e.getClass().equals(Empregado.class) && fim_de_mes){
+                assalariados.put(id,e);
+            }else if(e instanceof Comissionado && quinzena){
+                comissionados.put(id,e);
+            }
+        }
+        List<Map.Entry<String, Empregado>> listaHoristas = new ArrayList<>(horistas.entrySet());
+        listaHoristas.sort(Comparator.comparing(entry -> entry.getValue().nome));
+        List<Map.Entry<String, Empregado>> listaAssalariados = new ArrayList<>(assalariados.entrySet());
+        listaAssalariados.sort(Comparator.comparing(entry -> entry.getValue().nome));
+        List<Map.Entry<String, Empregado>> listaComissionados = new ArrayList<>(comissionados.entrySet());
+        listaComissionados.sort(Comparator.comparing(entry -> entry.getValue().nome));
+        folha.append("\n===============================================================================================================================\n" +
+                "===================== HORISTAS ================================================================================================\n" +
+                "===============================================================================================================================\n" +
+                "Nome                                 Horas Extra Salario Bruto Descontos Salario Liquido Metodo\n" +
+                "==================================== ===== ===== ============= ========= =============== ======================================\n");
+        double total_hora = 0;
+        double total_extra = 0;
+        double total_bruto = 0;
+        double total_desconto = 0;
+        double total_liquido = 0;
+        for(Map.Entry<String,Empregado> horista: listaHoristas){
+            double salario_liquido = 0;
+            double salario_bruto = 0;
+            double descontos = 0;
+            String id = horista.getKey();
+            Empregado e = horista.getValue();
+            double horas = 0;
+            double extras = 0;
+            for(Map.Entry<String, String> data_valor : banco.bancoDeHoras.get(id).entrySet()){
+                LocalDate data_i =  LocalDate.parse(data_valor.getKey(),formatter);
+                long periodo = ChronoUnit.DAYS.between(data_i,data_folha);
+                if(periodo > 0 && periodo < 7){
+                    double hrs = Double.parseDouble(data_valor.getValue().replace(",","."));
+                    double salario_hora = Double.parseDouble(e.salario.replace(",","."));
+                    if(hrs > 8){
+                        horas += 8;
+                        total_hora += 8;
+                        extras += hrs - 8;
+                        total_extra += hrs - 8;
+                        salario_bruto += salario_hora * 8 + salario_hora * 1.5 * (hrs - 8);
+                    }else{
+                        horas += hrs;
+                        total_hora += hrs;
+                        salario_bruto += salario_hora * hrs;
+                    }
+                }
+            }
+            if(e.sindicalizado && salario_bruto > 0){
+                double taxa = Double.parseDouble(e.taxa_sindical.replace(",","."));
+                LocalDate ultimaDataPagamento = ultimaDataPagamentoHorista(id,data_folha);
+                if(ultimaDataPagamento == null){
+                    LocalDate primeiraData = null;
+                    for(String dataStr : banco.bancoDeHoras.get(id).keySet()){
+                        LocalDate ponto = LocalDate.parse(dataStr,formatter);
+                        if(primeiraData == null || ponto.isBefore(primeiraData)){
+                            primeiraData = ponto;
+                        }
+                    }
+                    long dias = ChronoUnit.DAYS.between(primeiraData,data_folha) + 1;
+                    descontos += taxa * dias;
+                }else{
+                    long dias = ChronoUnit.DAYS.between(ultimaDataPagamento,data_folha);
+                    descontos += taxa * dias;
+                }
+                for(Map.Entry<String,String> data_valor : banco.sindicato.get(e.id_sindicato).entrySet()){
+                    LocalDate data_i = LocalDate.parse(data_valor.getKey(),formatter);
+                    long periodo = ChronoUnit.DAYS.between(data_i,data_folha);
+                    if(periodo > 0 && periodo < 7){
+                        double taxa_servico = Double.parseDouble(data_valor.getValue().replace(",","."));
+                        descontos += taxa_servico;
+                    }
+                }
+            }
+            salario_liquido = salario_bruto - descontos;
+            if(salario_liquido < 0){
+                salario_liquido = 0;
+                descontos = 0;
+            }
+            total += salario_bruto;
+            total_bruto += salario_bruto;
+            total_desconto += descontos;
+            total_liquido += salario_liquido;
+            String metodo;
+            if(e.metodoPagamento.equals("emMaos")){
+                metodo = "Em maos";
+            }else if(e.metodoPagamento.equals("correios")){
+                metodo = "Correios, " + e.endereco;
+            }else{
+                metodo = e.banco + ", Ag. " + e.agencia + " CC " + e.contaCorrente;
+            }
+            folha.append(String.format(
+                    Locale.US, "%-36s %5d %5d %13s %9s %15s %s%n", e.nome, (int) horas, (int) extras,
+                    formatar(salario_bruto), formatar(descontos), formatar(salario_liquido), metodo));
+        }
+        folha.append(String.format(
+                Locale.US,
+                "\nTOTAL HORISTAS                       %5s %5s %13s %9s %15s\n", (int)total_hora, (int)total_extra,
+                formatar(total_bruto), formatar(total_desconto), formatar(total_liquido)));
+        folha.append("\n===============================================================================================================================\n" +
+                "===================== ASSALARIADOS ============================================================================================\n" +
+                "===============================================================================================================================\n" +
+                "Nome                                             Salario Bruto Descontos Salario Liquido Metodo\n" +
+                "================================================ ============= ========= =============== ======================================\n");
+        total_bruto = 0;
+        total_desconto = 0;
+        total_liquido = 0;
+        for(Map.Entry<String,Empregado> assalariado: listaAssalariados){
+            double salario_liquido = 0;
+            double salario_bruto = 0;
+            double descontos = 0;
+            String id = assalariado.getKey();
+            Empregado e = assalariado.getValue();
+            salario_bruto = Double.parseDouble(e.salario.replace(",","."));
+            if(e.sindicalizado){
+                double taxa = Double.parseDouble(e.taxa_sindical.replace(",","."));
+                descontos += taxa * data_folha.lengthOfMonth();
+                for(Map.Entry<String, String> data_valor : banco.sindicato.get(e.id_sindicato).entrySet()){
+                    LocalDate data_i =  LocalDate.parse(data_valor.getKey(),formatter);
+                    if(!data_i.equals(data_folha) && YearMonth.from(data_i).equals(YearMonth.from(data_folha))){
+                        double taxa_servico = Double.parseDouble(data_valor.getValue().replace(",","."));
+                        descontos += taxa_servico;
+                    }
+                }
+            }
+            salario_liquido = salario_bruto - descontos;
+            total += salario_bruto;
+            total_bruto += salario_bruto;
+            total_desconto += descontos;
+            total_liquido += salario_liquido;
+            String metodo;
+            if(e.metodoPagamento.equals("emMaos")){
+                metodo = "Em maos";
+            }else if(e.metodoPagamento.equals("correios")){
+                metodo = "Correios, " + e.endereco;
+            }else{
+                metodo = e.banco + ", Ag. " + e.agencia + " CC " + e.contaCorrente;
+            }
+            folha.append(String.format(
+                    Locale.US, "%-48+s %13s %9s %15s %s%n", e.nome, formatar(salario_bruto), formatar(descontos),
+                    formatar(salario_liquido), metodo));
+        }
+        folha.append(String.format(
+                Locale.US,
+                "\nTOTAL ASSALARIADOS                               %13s %9s %15s\n", formatar(total_bruto),
+                formatar(total_desconto), formatar(total_liquido)
+        ));
+        folha.append("\n===============================================================================================================================\n" +
+                "===================== COMISSIONADOS ===========================================================================================\n" +
+                "===============================================================================================================================\n" +
+                "Nome                  Fixo     Vendas   Comissao Salario Bruto Descontos Salario Liquido Metodo\n" +
+                "===================== ======== ======== ======== ============= ========= =============== ======================================\n");
+
+        double total_fixo = 0;
+        double total_vendas = 0;
+        double total_comissao = 0;
+        total_bruto = 0;
+        total_desconto = 0;
+        total_liquido = 0;
+        for(Map.Entry<String,Empregado> comissionado: listaComissionados){
+            double salario_liquido = 0;
+            double salario_bruto = 0;
+            double descontos = 0;
+            String id = comissionado.getKey();
+            Empregado e = comissionado.getValue();
+            double salario_ano = Double.parseDouble(e.salario.replace(",","."));
+            double fixo = Math.floor((salario_ano * 24 / 52) * 100) / 100;
+            double vendas = 0;
+            for(Map.Entry<String, String> data_valor : banco.bancoDeHoras.get(id).entrySet()){
+                LocalDate data_i =  LocalDate.parse(data_valor.getKey(),formatter);
+                long periodo = ChronoUnit.DAYS.between(data_i,data_folha);
+                if(periodo > 0 && periodo < 14){
+                    double venda = Double.parseDouble(data_valor.getValue().replace(",","."));
+                    vendas += venda;
+                }
+            }
+            if(e.sindicalizado){
+                double taxa = Double.parseDouble(e.taxa_sindical.replace(",","."));
+                descontos += taxa * 14;
+                for(Map.Entry<String, String> data_valor : banco.sindicato.get(e.id_sindicato).entrySet()){
+                    LocalDate data_i =  LocalDate.parse(data_valor.getKey(),formatter);
+                    long periodo = ChronoUnit.DAYS.between(data_i,data_folha);
+                    if(periodo > 0 && periodo < 14){
+                        double taxa_servico = Double.parseDouble(data_valor.getValue().replace(",","."));
+                        descontos += taxa_servico;
+                    }
+                }
+            }
+            double comissao = Double.parseDouble(((Comissionado) e).comissao.replace(",","."));
+            double montante = Math.floor((vendas * comissao) * 100) / 100;
+            total_fixo += fixo;
+            total_vendas += vendas;
+            total_comissao += montante;
+            salario_bruto += montante + fixo;
+            salario_liquido = salario_bruto - descontos;
+            total += salario_bruto;
+            total_bruto += salario_bruto;
+            total_desconto += descontos;
+            total_liquido += salario_liquido;
+            String metodo;
+            if(e.metodoPagamento.equals("emMaos")){
+                metodo = "Em maos";
+            }else if(e.metodoPagamento.equals("correios")){
+                metodo = "Correios, " + e.endereco;
+            }else{
+                metodo = e.banco + ", Ag. " + e.agencia + " CC " + e.contaCorrente;
+            }
+            folha.append(String.format(
+                    Locale.US, "%-21s %8s %8s %8s %13s %9s %15s %s%n", e.nome, formatar(fixo), formatar(vendas),
+                    formatar(montante), formatar(salario_bruto),
+                    formatar(descontos), formatar(salario_liquido), metodo));
+        }
+        folha.append(String.format(
+                Locale.US,
+                "\nTOTAL COMISSIONADOS   %8s %8s %8s %13s %9s %15s\n", formatar(total_fixo), formatar(total_vendas),
+                formatar(total_comissao), formatar(total_bruto), formatar(total_desconto), formatar(total_liquido)
+        ));
+        folha.append(String.format(Locale.US, "\nTOTAL FOLHA: %s\n", formatar(total)));
+        try (PrintWriter arquivo = new PrintWriter(saida)) {
+            arquivo.print(folha);
+        }
+    }
+    //---------------------------------------------------------------------------------
+    public String totalFolha(String data) throws Exception{
+        LocalDate data_folha = LocalDate.parse(data,formatter);
+        double total = 0;
+        boolean fim_de_mes = false;
+        boolean quinzena = false;
+        boolean sexta = false;
+        if(data_folha.getDayOfMonth() == data_folha.lengthOfMonth()) fim_de_mes = true;
+        if(ChronoUnit.DAYS.between(LocalDate.of(2005,1,1), data_folha) % 14 == 13) quinzena = true;
+        if(data_folha.getDayOfWeek() == DayOfWeek.FRIDAY)  sexta = true;
         for(Map.Entry<String, Empregado> id_emp : banco.empregados.entrySet()){
             String id = id_emp.getKey();
             Empregado e = id_emp.getValue();
             if(e.getClass().equals(Empregado.class) && fim_de_mes){
-                total += Double.parseDouble(e.salario.replace(",","."));
-                if(e.sindicalizado){
-                    total -= Double.parseDouble(e.taxa_sindical.replace(",","."));
-                    for(Map.Entry<String, String> data_valor : banco.sindicato.get(e.id_sindicato).entrySet()){
-                        LocalDate data_i =  LocalDate.parse(data_valor.getKey(),formatter);
-                        if(YearMonth.from(data_i).equals(YearMonth.from(local_data))){
-                            total -= Double.parseDouble(data_valor.getValue().replace(",","."));
-                        }
-                    }
-                }
+                double salario = Double.parseDouble(e.salario.replace(",","."));
+                total += salario;
             }else if(e instanceof Comissionado && quinzena){
-                total += Double.parseDouble(e.salario.replace(",",".")) * 24 / 52;
+                double salario = Double.parseDouble(e.salario.replace(",","."));
+                total += Math.floor((salario * 24 / 52) * 100) / 100;
                 for(Map.Entry<String, String> data_valor : banco.bancoDeHoras.get(id).entrySet()){
                     LocalDate data_i =  LocalDate.parse(data_valor.getKey(),formatter);
-                    long periodo = ChronoUnit.DAYS.between(data_i,local_data);
+                    long periodo = ChronoUnit.DAYS.between(data_i,data_folha);
                     if(periodo > 0 && periodo < 14){
-                        total += Double.parseDouble(data_valor.getValue().replace(",",".")) * Double.parseDouble(((Comissionado) e).comissao.replace(",","."));
-                    }
-                }
-                if(e.sindicalizado){
-                    total -= Double.parseDouble(e.taxa_sindical.replace(",",".")) * 14;
-                    for(Map.Entry<String, String> data_valor : banco.sindicato.get(e.id_sindicato).entrySet()){
-                        LocalDate data_i =  LocalDate.parse(data_valor.getKey(),formatter);
-                        long periodo = ChronoUnit.DAYS.between(data_i,local_data);
-                        if(periodo > 0 && periodo < 14){
-                            total -= Double.parseDouble(data_valor.getValue().replace(",","."));
-                        }
+                        double venda = Double.parseDouble(data_valor.getValue().replace(",","."));
+                        double comissao = Double.parseDouble(((Comissionado) e).comissao.replace(",","."));
+                        total += Math.floor((venda * comissao) * 100) / 100;
                     }
                 }
             }else if(e instanceof  Horista && sexta){
                 for(Map.Entry<String, String> data_valor : banco.bancoDeHoras.get(id).entrySet()){
                     LocalDate data_i =  LocalDate.parse(data_valor.getKey(),formatter);
-                    long periodo = ChronoUnit.DAYS.between(data_i,local_data);
+                    long periodo = ChronoUnit.DAYS.between(data_i,data_folha);
                     if(periodo > 0 && periodo < 7){
                         double hrs = Double.parseDouble(data_valor.getValue().replace(",","."));
+                        double salario_hora = Double.parseDouble(e.salario.replace(",","."));
                         if(hrs > 8){
-                            total += Double.parseDouble(e.salario.replace(",",".")) * 8;
-                            total += Double.parseDouble(e.salario.replace(",",".")) * 1.5 * (hrs - 8);
+                            total += salario_hora * 8;
+                            total += salario_hora * 1.5 * (hrs - 8);
                         }else{
-                            total += Double.parseDouble(e.salario.replace(",",".")) * hrs;
-                        }
-                    }
-                }
-                if(e.sindicalizado){
-                    total -= Double.parseDouble(e.taxa_sindical.replace(",",".")) * 7;
-                    for(Map.Entry<String, String> data_valor : banco.sindicato.get(e.id_sindicato).entrySet()){
-                        LocalDate data_i =  LocalDate.parse(data_valor.getKey(),formatter);
-                        long periodo = ChronoUnit.DAYS.between(data_i,local_data);
-                        if(periodo > 0 && periodo < 7){
-                            total -= Double.parseDouble(data_valor.getValue().replace(",","."));
+                            total += salario_hora * hrs;
                         }
                     }
                 }
             }
         }
-        return String.valueOf(total).replace(".",",") + "0";
+        return String.format(Locale.US, "%.2f", total).replace(".", ",");
     }
+    public void undo(){
 
+    }
+    public void redo(){
 
+    }
 }
 
