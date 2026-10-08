@@ -48,7 +48,7 @@ alteraEmpregado emp=${id1} atributo=metodoPagamento valor=emMaos
 # empregado horista, com horas, sem overtime, sem sindicato
 id2=criarEmpregado nome="Paloma Duarte" endereco="end2" tipo=horista salario=11,25
 alteraEmpregado emp=${id2} atributo=sindicalizado valor=false
-alteraEmpregado emp=${id2} atributo=metodoPagamento valor1=banco banco="br.ufal.ic.p2.wepayu.Banco do Brasil" agencia=1591-1 contaCorrente=51000-0
+alteraEmpregado emp=${id2} atributo=metodoPagamento valor1=banco banco="Banco do Brasil" agencia=1591-1 contaCorrente=51000-0
 lancaCartao emp=${id2} data=1/1/2005 horas=8
 lancaCartao emp=${id2} data=2/1/2005 horas=7
 lancaCartao emp=${id2} data=1/2/2005 horas=8
@@ -59,7 +59,7 @@ lancaCartao emp=${id2} data=2/12/2005 horas=7
 # empregado horista, com horas, com overtime, sem sindicato
 id3=criarEmpregado nome="Lavinia Vlasak" endereco="end3" tipo=horista salario=11,21
 alteraEmpregado emp=${id3} atributo=sindicalizado valor=false
-alteraEmpregado emp=${id3} atributo=metodoPagamento valor1=banco banco="br.ufal.ic.p2.wepayu.Banco do Brasil" agencia=1591-1 contaCorrente=51001-1
+alteraEmpregado emp=${id3} atributo=metodoPagamento valor1=banco banco="Banco do Brasil" agencia=1591-1 contaCorrente=51001-1
 lancaCartao emp=${id3} data=1/1/2005 horas=10
 lancaCartao emp=${id3} data=2/1/2005 horas=7
 lancaCartao emp=${id3} data=1/2/2005 horas=8
@@ -81,7 +81,7 @@ lancaCartao emp=${id4} data=2/12/2005 horas=7
 # empregado horista, com horas, com overtime, com sindicato, com taxas adicionais
 id5=criarEmpregado nome="Claudia Raia" endereco="end5" tipo=horista salario=10,00
 alteraEmpregado emp=${id5} atributo=sindicalizado valor=true idSindicato=s124 taxaSindical=1,20
-alteraEmpregado emp=${id5} atributo=metodoPagamento valor1=banco banco="br.ufal.ic.p2.wepayu.Banco do Brasil" agencia=1591-1 contaCorrente=51002-2
+alteraEmpregado emp=${id5} atributo=metodoPagamento valor1=banco banco="Banco do Brasil" agencia=1591-1 contaCorrente=51002-2
 lancaCartao emp=${id5} data=1/1/2005 horas=10
 lancaCartao emp=${id5} data=2/1/2005 horas=7
 lancaCartao emp=${id5} data=1/2/2005 horas=8

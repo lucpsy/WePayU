@@ -13,7 +13,7 @@ removerEmpregado emp=${id0}
 id1=criarEmpregado nome="Joaozinho da Silva" endereco="Rua dos Jooes, 333 - Campina Grande" tipo=horista salario=23
 alteraEmpregado emp=${id2} atributo=metodoPagamento valor1=correios
 alteraEmpregado emp=${id2} atributo=sindicalizado valor=true idSindicato=s123 taxaSindical=30
-alteraEmpregado emp=${id2} atributo=metodoPagamento valor1=banco banco="br.ufal.ic.p2.wepayu.Banco do Brasil" agencia=1591-1 contaCorrente=51000-0
+alteraEmpregado emp=${id2} atributo=metodoPagamento valor1=banco banco="Banco do Brasil" agencia=1591-1 contaCorrente=51000-0
 getAtributoEmpregado emp=${id2} atributo=banco
 getEmpregadoPorNome nome="Joaozinho da Silva" indice=1
 getHorasExtrasTrabalhadas emp=${id1} dataInicial=1/1/2005 dataFinal=1/12/2005

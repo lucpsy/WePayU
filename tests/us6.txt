@@ -30,7 +30,7 @@ alteraEmpregado emp=${id1} atributo=endereco valor="Rua dos Jooes, 334 - Campina
 alteraEmpregado emp=${id1} atributo=tipo valor=assalariado
 alteraEmpregado emp=${id1} atributo=salario valor=1000
 expectError "Empregado nao eh comissionado." alteraEmpregado emp=${id1} atributo=comissao valor=0,05
-alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="br.ufal.ic.p2.wepayu.Banco do Brasil" agencia=1591-1 contaCorrente=51000-0
+alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="Banco do Brasil" agencia=1591-1 contaCorrente=51000-0
 alteraEmpregado emp=${id1} atributo=sindicalizado valor=true idSindicato=s123 taxaSindical=30
 
 expect "Joaozinho da Silva" getAtributoEmpregado emp=${id1} atributo=nome
@@ -39,7 +39,7 @@ expect assalariado getAtributoEmpregado emp=${id1} atributo=tipo
 expect 1000,00 getAtributoEmpregado emp=${id1} atributo=salario
 expectError "Empregado nao eh comissionado." getAtributoEmpregado emp=${id1} atributo=comissao
 expect banco getAtributoEmpregado emp=${id1} atributo=metodoPagamento
-expect "br.ufal.ic.p2.wepayu.Banco do Brasil" getAtributoEmpregado emp=${id1} atributo=banco
+expect "Banco do Brasil" getAtributoEmpregado emp=${id1} atributo=banco
 expect 1591-1 getAtributoEmpregado emp=${id1} atributo=agencia
 expect 51000-0 getAtributoEmpregado emp=${id1} atributo=contaCorrente
 expect true getAtributoEmpregado emp=${id1} atributo=sindicalizado
@@ -112,8 +112,8 @@ expectError "Comissao deve ser numerica." alteraEmpregado emp=${id1} atributo=co
 expectError "Comissao deve ser nao-negativa." alteraEmpregado emp=${id1} atributo=comissao valor=-1
 expectError "Metodo de pagamento invalido." alteraEmpregado emp=${id1} atributo=metodoPagamento valor=abc
 expectError "Banco nao pode ser nulo." alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="" agencia=1591-1 contaCorrente=51000-0
-expectError "Agencia nao pode ser nulo." alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="br.ufal.ic.p2.wepayu.Banco do Brasil" agencia="" contaCorrente=51000-0
-expectError "Conta corrente nao pode ser nulo." alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="br.ufal.ic.p2.wepayu.Banco do Brasil" agencia=1591-1 contaCorrente=""
+expectError "Agencia nao pode ser nulo." alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="Banco do Brasil" agencia="" contaCorrente=51000-0
+expectError "Conta corrente nao pode ser nulo." alteraEmpregado emp=${id1} atributo=metodoPagamento valor1=banco banco="Banco do Brasil" agencia=1591-1 contaCorrente=""
 expectError "Valor deve ser true ou false." alteraEmpregado emp=${id1} atributo=sindicalizado valor=abc
 expectError "Identificacao do sindicato nao pode ser nula." alteraEmpregado emp=${id1} atributo=sindicalizado valor=true idSindicato="" taxaSindical=30
 expectError "Taxa sindical nao pode ser nula." alteraEmpregado emp=${id1} atributo=sindicalizado valor=true idSindicato=s123 taxaSindical=""
