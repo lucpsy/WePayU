@@ -69,6 +69,7 @@ public class ServicoEmpregado {
             case "banco" -> deposito(empregado).getBanco();
             case "agencia" -> deposito(empregado).getAgencia();
             case "contaCorrente" -> deposito(empregado).getContaCorrente();
+            case "agendaPagamento" -> empregado.get_Agenda();
             default -> throw new AtributoInexistenteException();
         };
     }
@@ -87,6 +88,7 @@ public class ServicoEmpregado {
             case "tipo" -> trocarTipoMantendoSalario(id, empregado, valor);
             case "sindicalizado" -> desfiliar(empregado, valor);
             case "metodoPagamento" -> alterarMetodoPagamento(empregado, valor);
+            case "agendaPagamento" -> empregado.setAgendaPagamento(AgendaPagamento.de(valor));
             default -> throw new AtributoInexistenteException();
         }
     }

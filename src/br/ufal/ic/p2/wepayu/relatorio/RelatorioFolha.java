@@ -125,7 +125,7 @@ public class RelatorioFolha {
         BigDecimal totalComissao = BigDecimal.ZERO;
         for (Comissionado comissionado : comissionados) {
             Periodo periodo = comissionado.periodoDeApuracao(data);
-            BigDecimal fixo = comissionado.calcularFixo();
+            BigDecimal fixo = comissionado.fixoDoPeriodo(periodo);
             BigDecimal vendas = comissionado.totalVendas(periodo);
             BigDecimal comissao = comissionado.calcularComissao(periodo);
             Contracheque contracheque = comissionado.calcularContracheque(data);

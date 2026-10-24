@@ -17,6 +17,7 @@ public class Horista extends Empregado {
 
     public Horista(String nome, String endereco, BigDecimal salarioPorHora) {
         super(nome, endereco, salarioPorHora);
+        setAgendaPagamento(new Semanal(1));
     }
 
     public Horista(Empregado origem, BigDecimal salarioPorHora) {
@@ -53,31 +54,11 @@ public class Horista extends Empregado {
         return total;
     }
 
-    @Override
-    public boolean recebeEm(LocalDate data) {
-        return data.getDayOfWeek() == DayOfWeek.FRIDAY;
-    }
-
     /**
      * Começa depois da última sexta em que houve pagamento de verdade (com horas
      * trabalhadas na semana). Antes do primeiro pagamento, conta desde o primeiro
      * cartão lançado, que é quando o horista é considerado contratado.
      */
-    @Override
-    public Periodo periodoDeApuracao(LocalDate dataPagamento) {
-        LocalDate fim = dataPagamento.plusDays(1);
-        Optional<LocalDate> primeiroCartao = dataDoPrimeiroCartao();
-        if (primeiroCartao.isEmpty() || primeiroCartao.get().isAfter(dataPagamento)) {
-            return Periodo.de(dataPagamento.minusDays(6), fim);
-        }
-        LocalDate contratacao = primeiroCartao.get();
-        for (LocalDate sexta = dataPagamento.minusWeeks(1); !sexta.isBefore(contratacao); sexta = sexta.minusWeeks(1)) {
-            if (trabalhouNaSemanaDe(sexta)) {
-                return Periodo.de(sexta.plusDays(1), fim);
-            }
-        }
-        return Periodo.de(contratacao, fim);
-    }
 
     @Override
     protected BigDecimal brutoDoPeriodo(Periodo periodo) {

@@ -23,6 +23,14 @@ public final class Periodo {
         return new Periodo(inicio, fim);
     }
 
+    public LocalDate getInicio() { return inicio; }
+
+    public LocalDate getFim() { return fim; }
+
+    public static Periodo vazio(LocalDate data) {
+        return new Periodo(data, data);
+    }
+
     public boolean contem(LocalDate data) {
         return !data.isBefore(inicio) && data.isBefore(fim);
     }

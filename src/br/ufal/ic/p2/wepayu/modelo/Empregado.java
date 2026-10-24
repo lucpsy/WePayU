@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -23,10 +24,12 @@ public abstract class Empregado {
     private BigDecimal salario;
     private MetodoPagamento metodoPagamento = new EmMaos();
     private MembroSindicato membroSindicato;
+    private AgendaPagamento agendaPagamento;
 
     // Ficam no empregado, e não no tipo, para não se perderem se ele trocar de tipo e voltar.
     private final List<CartaoPonto> cartoes = new ArrayList<>();
     private final List<Venda> vendas = new ArrayList<>();
+    private final List<LocalDate> pagamentos = new ArrayList<>();
 
     protected Empregado(String nome, String endereco, BigDecimal salario) {
         setNome(nome);
@@ -41,18 +44,30 @@ public abstract class Empregado {
         this.membroSindicato = origem.membroSindicato;
         this.cartoes.addAll(origem.cartoes);
         this.vendas.addAll(origem.vendas);
+        this.pagamentos.addAll(origem.pagamentos);
+        this.agendaPagamento = origem.agendaPagamento;
     }
 
     public abstract String getTipo();
 
     /** Diz se este empregado é pago na data informada. */
-    public abstract boolean recebeEm(LocalDate data);
+    public  boolean recebeEm(LocalDate data){
+        return agendaPagamento.recebeEm(data);
+    }
 
     /**
      * Período que o pagamento da data cobre: tudo o que foi lançado desde o último
      * pagamento (inclusive a própria data) entra nas contas.
      */
-    public abstract Periodo periodoDeApuracao(LocalDate dataPagamento);
+    public  Periodo periodoDeApuracao(LocalDate dataPagamento){
+        LocalDate inicio = getUltimoPagamento(dataPagamento);
+        if (inicio.isAfter(dataPagamento)) return Periodo.vazio(dataPagamento);
+        return Periodo.de(inicio, dataPagamento.plusDays(1));
+    }
+
+    public BigDecimal fixoDoPeriodo(Periodo periodo) {
+        return agendaPagamento.fixoDoPeriodo(getSalario(), periodo);
+    }
 
     protected abstract BigDecimal brutoDoPeriodo(Periodo periodo);
 
@@ -147,5 +162,24 @@ public abstract class Empregado {
 
     protected void adicionarVenda(Venda venda) {
         vendas.add(venda);
+    }
+
+    public String get_Agenda(){
+        return agendaPagamento.descricao();
+    }
+    public void setAgendaPagamento(AgendaPagamento agendaPagamento) {
+        this.agendaPagamento = agendaPagamento;
+    }
+
+    public LocalDate getUltimoPagamento(LocalDate dataPagamento) {
+        return pagamentos.stream()
+                .filter(d -> d.isBefore(dataPagamento))
+                .max(Comparator.naturalOrder())
+                .map(d -> d.plusDays(1))
+                .orElse(DATA_CONTRATACAO_PADRAO);
+    }
+
+    public void addPagamento(LocalDate dataPagamento) {
+        pagamentos.add(dataPagamento);
     }
 }

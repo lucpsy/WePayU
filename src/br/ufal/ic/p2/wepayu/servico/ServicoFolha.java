@@ -24,7 +24,11 @@ public class ServicoFolha {
         LocalDate dataFolha = Entrada.data(data, DataInvalidaException::new);
         BigDecimal total = BigDecimal.ZERO;
         for (Empregado empregado : quemRecebeEm(dataFolha)) {
-            total = total.add(empregado.calcularBruto(dataFolha));
+            BigDecimal bruto = empregado.calcularBruto(dataFolha);
+            total = total.add(bruto);
+            if (bruto.signum() > 0) {
+                empregado.addPagamento(dataFolha);
+            }
         }
         return Formato.moeda(total);
     }
@@ -33,6 +37,11 @@ public class ServicoFolha {
     public void rodarFolha(String data, String saida) throws WePayUException {
         LocalDate dataFolha = Entrada.data(data, DataInvalidaException::new);
         new RelatorioFolha(dataFolha, quemRecebeEm(dataFolha)).gravar(saida);
+        for(Empregado e : quemRecebeEm(dataFolha)) {
+            if(e.calcularBruto(dataFolha).signum() > 0) {
+                e.addPagamento(dataFolha);
+            }
+        }
     }
 
     private List<Empregado> quemRecebeEm(LocalDate data) {

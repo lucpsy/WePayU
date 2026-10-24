@@ -12,6 +12,7 @@ public class Assalariado extends Empregado {
 
     public Assalariado(String nome, String endereco, BigDecimal salario) {
         super(nome, endereco, salario);
+        setAgendaPagamento(new Mensal());
     }
 
     public Assalariado(Empregado origem, BigDecimal salario) {
@@ -24,23 +25,7 @@ public class Assalariado extends Empregado {
     }
 
     @Override
-    public boolean recebeEm(LocalDate data) {
-        return !data.isBefore(DATA_CONTRATACAO_PADRAO)
-                && data.equals(Datas.ultimoDiaUtil(YearMonth.from(data)));
-    }
-
-    @Override
-    public Periodo periodoDeApuracao(LocalDate dataPagamento) {
-        LocalDate pagamentoAnterior = Datas.ultimoDiaUtil(YearMonth.from(dataPagamento).minusMonths(1));
-        LocalDate inicio = pagamentoAnterior.plusDays(1);
-        if (inicio.isBefore(DATA_CONTRATACAO_PADRAO)) {
-            inicio = DATA_CONTRATACAO_PADRAO;
-        }
-        return Periodo.de(inicio, dataPagamento.plusDays(1));
-    }
-
-    @Override
     protected BigDecimal brutoDoPeriodo(Periodo periodo) {
-        return getSalario();
+        return fixoDoPeriodo(periodo);
     }
 }
