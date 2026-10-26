@@ -8,32 +8,42 @@ import java.time.temporal.ChronoUnit;
 
 public class Semanal implements AgendaPagamento{
     private final int intervalo;
-    Semanal(int intervalo) {
+    private final int dia;
+    public Semanal(int intervalo, int dia) {
         this.intervalo = intervalo;
+        this.dia = dia;
     }
     @Override
     public boolean recebeEm(LocalDate data) {
         if(intervalo == 1) {
-            return data.getDayOfWeek() == DayOfWeek.FRIDAY;
+            return data.getDayOfWeek() == DayOfWeek.of(dia);
         }else {
-            long dias = ChronoUnit.DAYS.between(ANCORA, data);
-            return dias % 14 == 14 - 1;
+            long semanas = ChronoUnit.WEEKS.between(ANCORA, data);
+            return semanas % intervalo == intervalo - 1 && data.getDayOfWeek() == DayOfWeek.of(dia);
         }
     }
 
     @Override
     public BigDecimal fixoDoPeriodo(BigDecimal salario, Periodo periodo) {
-        BigDecimal semanas = BigDecimal.valueOf(periodo.dias() / 7);
-        return salario.multiply(BigDecimal.valueOf(12)).multiply(semanas)
+        boolean temPagamento = false;
+        for (LocalDate d = periodo.getInicio(); d.isBefore(periodo.getFim()); d = d.plusDays(1)) {
+            if (recebeEm(d)) {
+                temPagamento = true;
+                break;
+            }
+        }
+        if (!temPagamento) return BigDecimal.ZERO;
+        return salario.multiply(BigDecimal.valueOf(12))
+                .multiply(BigDecimal.valueOf(intervalo))
                 .divide(BigDecimal.valueOf(52), 2, RoundingMode.DOWN);
     }
 
     @Override
     public String descricao() {
         if(intervalo == 1){
-            return "semanal 5";
+            return "semanal " + dia;
         }else{
-            return "semanal 2 5";
+            return "semanal " + intervalo + " " + dia;
         }
     }
 }

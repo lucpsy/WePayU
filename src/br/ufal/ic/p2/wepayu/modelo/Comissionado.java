@@ -22,7 +22,7 @@ public class Comissionado extends Empregado {
     public Comissionado(String nome, String endereco, BigDecimal salario, BigDecimal comissao) {
         super(nome, endereco, salario);
         setComissao(comissao);
-        setAgendaPagamento(new Semanal(2));
+        setAgendaPagamento(new Semanal(2, 5));
     }
 
     /** Troca de tipo: o salário continua o mesmo e só a comissão é informada. */

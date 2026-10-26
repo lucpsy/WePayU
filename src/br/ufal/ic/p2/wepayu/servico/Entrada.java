@@ -1,7 +1,10 @@
 package br.ufal.ic.p2.wepayu.servico;
 
 import br.ufal.ic.p2.wepayu.excecoes.*;
+import br.ufal.ic.p2.wepayu.modelo.AgendaPagamento;
+import br.ufal.ic.p2.wepayu.modelo.Mensal;
 import br.ufal.ic.p2.wepayu.modelo.Periodo;
+import br.ufal.ic.p2.wepayu.modelo.Semanal;
 import br.ufal.ic.p2.wepayu.util.Datas;
 
 import java.math.BigDecimal;
@@ -115,5 +118,37 @@ final class Entrada {
             throw erroSeNaoNumerico.get();
         }
         return new BigDecimal(texto.replace(',', '.'));
+    }
+
+    public static AgendaPagamento agenda(String descricao) throws WePayUException {
+        if (vazio(descricao)) throw new DescricaoInvalidaException();
+        String[] a = descricao.trim().split("\\s+");
+        try {
+            switch (a[0]) {
+                case "semanal" -> {
+                    if (a.length == 2) {
+                        int dia = Integer.parseInt(a[1]);
+                        if (dia >= 1 && dia <= 7) return new Semanal(1, dia);
+                    } else if (a.length == 3) {
+                        int intervalo = Integer.parseInt(a[1]);
+                        int dia = Integer.parseInt(a[2]);
+                        if (intervalo >= 1 && intervalo <= 52 && dia >= 1 && dia <= 7) {
+                            return new Semanal(intervalo, dia);
+                        }
+                    }
+                }
+                case "mensal" -> {
+                    if (a.length == 2) {
+                        if (a[1].equals("$")) return new Mensal("$");
+                        int dia = Integer.parseInt(a[1]);
+                        if (dia >= 1 && dia <= 28) return new Mensal(String.valueOf(dia));
+                    }
+                }
+                default -> { }
+            }
+        } catch (NumberFormatException e) {
+            // cai no erro abaixo
+        }
+        throw new DescricaoInvalidaException();
     }
 }

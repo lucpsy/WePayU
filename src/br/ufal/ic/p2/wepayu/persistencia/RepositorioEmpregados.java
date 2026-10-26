@@ -3,7 +3,9 @@ package br.ufal.ic.p2.wepayu.persistencia;
 import br.ufal.ic.p2.wepayu.excecoes.EmpregadoNaoExisteException;
 import br.ufal.ic.p2.wepayu.excecoes.IdentificacaoNulaException;
 import br.ufal.ic.p2.wepayu.excecoes.WePayUException;
+import br.ufal.ic.p2.wepayu.modelo.AgendaPagamento;
 import br.ufal.ic.p2.wepayu.modelo.Empregado;
+import br.ufal.ic.p2.wepayu.servico.ServicoAgenda;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +19,14 @@ import java.util.Optional;
 public class RepositorioEmpregados {
     private final Map<String, Empregado> empregados = new LinkedHashMap<>();
     private int proximoNumero = 1;
+    private List<AgendaPagamento> agendas;
 
+    public List<AgendaPagamento> agendas() {
+        if (agendas == null) {
+            agendas = new ArrayList<>(List.of(ServicoAgenda.PADROES));
+        }
+        return agendas;
+    }
     /** Cadastra o empregado e devolve o id gerado (id1, id2, ...). */
     public String adicionar(Empregado empregado) {
         String id = "id" + proximoNumero;
@@ -80,6 +89,8 @@ public class RepositorioEmpregados {
     public void limpar() {
         empregados.clear();
         proximoNumero = 1;
+        agendas().clear();
+        agendas().addAll(List.of(ServicoAgenda.PADROES));
     }
 
     /** Copia o conteúdo de outro repositório para este (usado ao carregar, desfazer e refazer). */
@@ -87,5 +98,7 @@ public class RepositorioEmpregados {
         empregados.clear();
         empregados.putAll(outro.empregados);
         proximoNumero = outro.proximoNumero;
+        agendas().clear();
+        agendas().addAll(outro.agendas());
     }
 }

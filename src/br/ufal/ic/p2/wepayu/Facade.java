@@ -4,10 +4,7 @@ import br.ufal.ic.p2.wepayu.excecoes.ErroDeArquivoException;
 import br.ufal.ic.p2.wepayu.excecoes.WePayUException;
 import br.ufal.ic.p2.wepayu.persistencia.ArmazenamentoXml;
 import br.ufal.ic.p2.wepayu.persistencia.RepositorioEmpregados;
-import br.ufal.ic.p2.wepayu.servico.GerenciadorComandos;
-import br.ufal.ic.p2.wepayu.servico.ServicoEmpregado;
-import br.ufal.ic.p2.wepayu.servico.ServicoFolha;
-import br.ufal.ic.p2.wepayu.servico.ServicoLancamento;
+import br.ufal.ic.p2.wepayu.servico.*;
 
 /**
  * Porta de entrada do sistema (usada pelos testes de aceitação). Não tem regra
@@ -19,12 +16,14 @@ public class Facade {
     private final ServicoEmpregado empregados;
     private final ServicoLancamento lancamentos;
     private final ServicoFolha folha;
+    private final ServicoAgenda agendas;
 
     public Facade() throws ErroDeArquivoException {
         ArmazenamentoXml armazenamento = new ArmazenamentoXml();
         RepositorioEmpregados repositorio = armazenamento.carregar();
         this.comandos = new GerenciadorComandos(repositorio, armazenamento);
-        this.empregados = new ServicoEmpregado(repositorio);
+        this.agendas = new ServicoAgenda(repositorio);
+        this.empregados = new ServicoEmpregado(repositorio,agendas);
         this.lancamentos = new ServicoLancamento(repositorio);
         this.folha = new ServicoFolha(repositorio);
     }
@@ -137,4 +136,10 @@ public class Facade {
     public String totalFolha(String data) throws WePayUException {
         return comandos.consultar(() -> folha.totalFolha(data));
     }
+    // ---- Agenda de pagamento ----
+
+    public void criarAgendaDePagamentos(String descricao) throws WePayUException {
+        comandos.executar(() -> agendas.lancar_agenda(descricao));
+    }
+
 }

@@ -11,9 +11,10 @@ import java.util.List;
 /** Cadastro, consulta, alteração e remoção de empregados. */
 public class ServicoEmpregado {
     private final RepositorioEmpregados repositorio;
-
-    public ServicoEmpregado(RepositorioEmpregados repositorio) {
+    private final ServicoAgenda agendas;
+    public ServicoEmpregado(RepositorioEmpregados repositorio,ServicoAgenda agendas) {
         this.repositorio = repositorio;
+        this.agendas = agendas;
     }
 
     /** Cria um horista ou assalariado. Comissionado precisa da outra versão, com comissão. */
@@ -88,7 +89,7 @@ public class ServicoEmpregado {
             case "tipo" -> trocarTipoMantendoSalario(id, empregado, valor);
             case "sindicalizado" -> desfiliar(empregado, valor);
             case "metodoPagamento" -> alterarMetodoPagamento(empregado, valor);
-            case "agendaPagamento" -> empregado.setAgendaPagamento(AgendaPagamento.de(valor));
+            case "agendaPagamento" -> empregado.setAgendaPagamento(agendas.de(valor));
             default -> throw new AtributoInexistenteException();
         }
     }

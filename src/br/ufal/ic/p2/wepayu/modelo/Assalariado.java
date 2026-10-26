@@ -1,10 +1,9 @@
 package br.ufal.ic.p2.wepayu.modelo;
 
-import br.ufal.ic.p2.wepayu.util.Datas;
+import br.ufal.ic.p2.wepayu.servico.ServicoAgenda;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.YearMonth;
+
 
 /** Recebe o salário mensal inteiro, no último dia útil de cada mês. */
 public class Assalariado extends Empregado {
@@ -12,7 +11,7 @@ public class Assalariado extends Empregado {
 
     public Assalariado(String nome, String endereco, BigDecimal salario) {
         super(nome, endereco, salario);
-        setAgendaPagamento(new Mensal());
+        setAgendaPagamento(new Mensal("$"));
     }
 
     public Assalariado(Empregado origem, BigDecimal salario) {

@@ -17,7 +17,7 @@ public class Horista extends Empregado {
 
     public Horista(String nome, String endereco, BigDecimal salarioPorHora) {
         super(nome, endereco, salarioPorHora);
-        setAgendaPagamento(new Semanal(1));
+        setAgendaPagamento(new Semanal(1, 5));
     }
 
     public Horista(Empregado origem, BigDecimal salarioPorHora) {
